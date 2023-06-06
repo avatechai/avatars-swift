@@ -44,7 +44,7 @@ public struct AvatarView: View {
                     }
         .onAppear {
             self.webViewStore.messageHandler = MessageHandler(callbackAction: onCallback)
-            self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
+            self.webViewStore.webView.load(URLRequest(url: URL(string: "http://embed.api.avatech.ai/")!))
         }
     }
         
