@@ -21,17 +21,18 @@ public struct AvatarView: View {
     
     var text: Message
     var avatarId: String
+    var speakerId: String
         
-    public init(_ text: Message,_ avatarId: String) {
+    public init(_ text: Message,_ avatarId: String, _ speakerId: String) {
         self.text = text
         self.avatarId = avatarId
+        self.speakerId = speakerId
     }
     
     func onCallback (eventName: String, value: String) {
-        print("Got ", eventName, value)
-        
         if (eventName == "clientReady") {
             sendEvent(eventName: "avatarIdChange", value: avatarId)
+            sendEvent(eventName: "speakerIdChange", value: speakerId)
         }
     }
     
@@ -39,10 +40,13 @@ public struct AvatarView: View {
         WebView(webView: webViewStore.webView)
         .onChange(of: text) { value in
             sendEvent(eventName: "textChange", value: value.text)
-                    }
+        }
         .onChange(of: avatarId) { value in
             sendEvent(eventName: "avatarIdChange", value: value)
-                    }
+        }
+        .onChange(of: speakerId) { value in
+            sendEvent(eventName: "speakerIdChange", value: value)
+        }
         .onAppear {
             self.webViewStore.messageHandler = MessageHandler(callbackAction: onCallback)
             self.webViewStore.webView.load(URLRequest(url: URL(string: "https://embed.api.avatech.ai/")!))
