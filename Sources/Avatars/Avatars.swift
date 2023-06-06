@@ -10,10 +10,11 @@ public struct Message: Identifiable, Equatable {
     var text: String
     
     public init(text: String) {
-            self.text = text
-        }
+        self.text = text
+    }
 }
  
+@available(macOS 11.0, *)
 public struct AvatarView: View {
     
     @StateObject var webViewStore = WebViewStore()
@@ -50,7 +51,6 @@ public struct AvatarView: View {
         
     
     public func sendEvent(eventName: String, value: String) {
-//        print(eventName)
         self.webViewStore.webView.evaluateJavaScript(
             """
             window.sendHandleAvatarEvent('\(eventName)', '\(value)');
@@ -105,21 +105,31 @@ public class WebViewStore: ObservableObject {
       
       let configuration = WKWebViewConfiguration()
 //      configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.video
+#if os(iOS)
       if #available(iOS 10.0, *) {
           configuration.mediaTypesRequiringUserActionForPlayback = []
       } else {
           configuration.requiresUserActionForMediaPlayback = false
       }
+#endif
       configuration.preferences = preferences
       
       let webView = WKWebView(frame: CGRect.zero, configuration: configuration)
+      
+#if os(macOS)
+      webView.setValue(false, forKey: "drawsBackground")
+#endif
+      
+#if os(iOS)
       webView.scrollView.isScrollEnabled = true
       webView.isOpaque = false
+      
       if #available(iOS 14.0, *) {
           webView.backgroundColor = UIColor(.clear)
       } else {
           webView.backgroundColor = .clear
       }
+#endif
 
       self.webView = webView
       setupObservers()
