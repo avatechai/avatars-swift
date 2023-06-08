@@ -24,8 +24,9 @@ public class AvatarViewModel: ObservableObject {
     @Published public var y: Float
     @Published public var scale: Float
     @Published public var rotation: Float
+    @Published public var isDevelopment: Bool = false
     
-    public init(text: Message, avatarId: String, speakerId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float) {
+    public init(text: Message, avatarId: String, speakerId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false) {
         self.text = text
         self.avatarId = avatarId
         self.speakerId = speakerId
@@ -33,6 +34,23 @@ public class AvatarViewModel: ObservableObject {
         self.y = y
         self.scale = scale
         self.rotation = rotation
+        self.isDevelopment = isDevelopment
+    }
+}
+
+
+@available(macOS 11.0, *)
+public extension View {
+    func applyAvatarViewModelModifiers(_ viewModel: AvatarViewModel, with webViewStore: WebViewStore) -> some View {
+        self
+            .onReceive(viewModel.$isDevelopment) { webViewStore.sendEvent("debugChange", String($0))}
+            .onReceive(viewModel.$text) { webViewStore.sendEvent("textChange", $0.text) }
+            .onReceive(viewModel.$avatarId) { webViewStore.sendEvent("avatarIdChange", $0) }
+            .onReceive(viewModel.$speakerId) { webViewStore.sendEvent("speakerIdChange", $0) }
+            .onReceive(viewModel.$x) { webViewStore.sendEvent("xChange", String($0)) }
+            .onReceive(viewModel.$y) { webViewStore.sendEvent("yChange", String($0)) }
+            .onReceive(viewModel.$scale) { webViewStore.sendEvent("scaleChange", String($0)) }
+            .onReceive(viewModel.$rotation) { webViewStore.sendEvent("rotationChange", String($0)) }
     }
 }
 
@@ -44,51 +62,35 @@ public struct AvatarView: View {
     
     @ObservedObject var viewModel: AvatarViewModel
     
-    var isDevelopment = false
-    
-    public init(_ viewModel: AvatarViewModel, isDevelopment: Bool = false) {
+    public init(_ viewModel: AvatarViewModel) {
         self.viewModel = viewModel
-        self.isDevelopment = isDevelopment
     }
     
     func onCallback (eventName: String, value: String) {
         if (eventName == "clientReady") {
-            sendEvent("avatarIdChange", viewModel.avatarId)
-            sendEvent("speakerIdChange", viewModel.speakerId)
-            sendEvent("xChange", String(viewModel.x))
-            sendEvent("yChange", String(viewModel.y))
-            sendEvent("scaleChange", String(viewModel.scale))
-            sendEvent("rotationChange", String(viewModel.rotation))
+            self.webViewStore.sendEvent("avatarIdChange", viewModel.avatarId)
+            self.webViewStore.sendEvent("speakerIdChange", viewModel.speakerId)
+            self.webViewStore.sendEvent("xChange", String(viewModel.x))
+            self.webViewStore.sendEvent("yChange", String(viewModel.y))
+            self.webViewStore.sendEvent("scaleChange", String(viewModel.scale))
+            self.webViewStore.sendEvent("rotationChange", String(viewModel.rotation))
+            
+            self.webViewStore.sendEvent("debugChange", String(viewModel.isDevelopment))
         }
     }
     
     public var body: some View {
         WebView(webView: webViewStore.webView)
-            .onReceive(viewModel.$text) { sendEvent("textChange", $0.text) }
-            .onReceive(viewModel.$avatarId) { sendEvent("avatarIdChange", $0) }
-            .onReceive(viewModel.$speakerId) { sendEvent("speakerIdChange", $0) }
-            .onReceive(viewModel.$x) { sendEvent("xChange", String($0)) }
-            .onReceive(viewModel.$y) { sendEvent("yChange", String($0)) }
-            .onReceive(viewModel.$scale) { sendEvent("scaleChange", String($0)) }
-            .onReceive(viewModel.$rotation) { sendEvent("rotationChange", String($0)) }
+            .applyAvatarViewModelModifiers(viewModel, with: webViewStore)
             .onAppear {
                 self.webViewStore.messageHandler = MessageHandler(callbackAction: onCallback)
                 
-                if (self.isDevelopment) {
+                if (viewModel.isDevelopment) {
                     self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
                 } else {
                     self.webViewStore.webView.load(URLRequest(url: URL(string: "https://embed.api.avatech.ai/")!))
                 }
             }
-    }
-    
-    
-    public func sendEvent(_ eventName: String,_ value: String) {
-        self.webViewStore.webView.evaluateJavaScript(
-            """
-            window.sendHandleAvatarEvent('\(eventName)', '\(value)');
-            """
-        )
     }
 }
 
@@ -121,6 +123,14 @@ public class WebViewStore: ObservableObject {
         didSet {
             setupObservers()
         }
+    }
+    
+    public func sendEvent(_ eventName: String,_ value: String) {
+        self.webView.evaluateJavaScript(
+            """
+            window.sendHandleAvatarEvent('\(eventName)', '\(value)');
+            """
+        )
     }
     
     @Published public var messageHandler: MessageHandler? {
