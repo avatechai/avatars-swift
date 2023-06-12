@@ -25,8 +25,10 @@ public class AvatarViewModel: ObservableObject {
     @Published public var scale: Float
     @Published public var rotation: Float
     @Published public var isDevelopment: Bool = false
+    @Published public var emotionGroup: [String: String]
+    @Published public var currentEmotion: String
     
-    public init(text: Message, avatarId: String, speakerId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false) {
+    public init(text: Message, avatarId: String, speakerId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false, emotionGroup: [String: String], currentEmotion: String) {
         self.text = text
         self.avatarId = avatarId
         self.speakerId = speakerId
@@ -35,6 +37,8 @@ public class AvatarViewModel: ObservableObject {
         self.scale = scale
         self.rotation = rotation
         self.isDevelopment = isDevelopment
+        self.emotionGroup = emotionGroup
+        self.currentEmotion = currentEmotion
     }
 }
 
@@ -51,6 +55,7 @@ public extension View {
             .onReceive(viewModel.$y) { webViewStore.sendEvent("yChange", String($0)) }
             .onReceive(viewModel.$scale) { webViewStore.sendEvent("scaleChange", String($0)) }
             .onReceive(viewModel.$rotation) { webViewStore.sendEvent("rotationChange", String($0)) }
+            .onReceive(viewModel.$currentEmotion) { webViewStore.sendEvent("emotionChange", String($0)) }
     }
 }
 
@@ -144,7 +149,7 @@ public class WebViewStore: ObservableObject {
     
     public init() {
         let preferences = WKPreferences()
-        //      preferences.javaScriptEnabled = true
+         //      preferences.javaScriptEnabled = true
         
         let configuration = WKWebViewConfiguration()
         //      configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.video
