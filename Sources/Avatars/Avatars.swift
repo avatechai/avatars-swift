@@ -16,29 +16,25 @@ public struct Message: Identifiable, Equatable {
 
 @available(macOS 11.0, *)
 public class AvatarViewModel: ObservableObject {
-    @Published public var text: Message
     
     @Published public var avatarId: String
-    @Published public var speakerId: String
     @Published public var x: Float
     @Published public var y: Float
     @Published public var scale: Float
     @Published public var rotation: Float
     @Published public var isDevelopment: Bool = false
-    @Published public var emotionGroup: [String: String]?
     @Published public var currentEmotion: String?
+    @Published public var availableEmotion: Array<String>?
+    @Published public var audioSource: String?
     
     @Published public var rawBase64Audio: String?
-    public init(text: Message, avatarId: String, speakerId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false, emotionGroup: [String: String]? = nil, currentEmotion: String? = nil) {
-        self.text = text
+    public init(text: Message, avatarId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false, currentEmotion: String? = nil) {
         self.avatarId = avatarId
-        self.speakerId = speakerId
         self.x = x
         self.y = y
         self.scale = scale
         self.rotation = rotation
         self.isDevelopment = isDevelopment
-        self.emotionGroup = emotionGroup
         self.currentEmotion = currentEmotion
     }
 }
@@ -49,15 +45,14 @@ public extension View {
     func applyAvatarViewModelModifiers(_ viewModel: AvatarViewModel, with webViewStore: WebViewStore) -> some View {
         self
             .onReceive(viewModel.$isDevelopment) { webViewStore.sendEvent("debugChange", String($0))}
-            .onReceive(viewModel.$text) { webViewStore.sendEvent("textChange", $0.text) }
             .onReceive(viewModel.$avatarId) { webViewStore.sendEvent("avatarIdChange", $0) }
-            .onReceive(viewModel.$speakerId) { webViewStore.sendEvent("speakerIdChange", $0) }
             .onReceive(viewModel.$x) { webViewStore.sendEvent("xChange", String($0)) }
             .onReceive(viewModel.$y) { webViewStore.sendEvent("yChange", String($0)) }
             .onReceive(viewModel.$scale) { webViewStore.sendEvent("scaleChange", String($0)) }
             .onReceive(viewModel.$rotation) { webViewStore.sendEvent("rotationChange", String($0)) }
             .onReceive(viewModel.$currentEmotion) { webViewStore.sendEvent("emotionChange", String($0 ?? "")) }
             .onReceive(viewModel.$rawBase64Audio) { webViewStore.sendEvent("rawBase64AudioChange", String($0 ?? "")) }
+            .onReceive(viewModel.$audioSource) { webViewStore.sendEvent("audioSourceChange", String($0 ?? "")) }
     }
 }
 
@@ -73,16 +68,17 @@ public struct AvatarView: View {
         self.viewModel = viewModel
     }
     
-    func onCallback (eventName: String, value: String) {
+    func onCallback (eventName: String, value: Any) {
         if (eventName == "clientReady") {
             self.webViewStore.sendEvent("avatarIdChange", viewModel.avatarId)
-            self.webViewStore.sendEvent("speakerIdChange", viewModel.speakerId)
             self.webViewStore.sendEvent("xChange", String(viewModel.x))
             self.webViewStore.sendEvent("yChange", String(viewModel.y))
             self.webViewStore.sendEvent("scaleChange", String(viewModel.scale))
             self.webViewStore.sendEvent("rotationChange", String(viewModel.rotation))
-            
             self.webViewStore.sendEvent("debugChange", String(viewModel.isDevelopment))
+        }
+        if (eventName == "emotionUpdate") {
+                self.viewModel.availableEmotion = value as? Array<String>
         }
     }
     
@@ -95,7 +91,7 @@ public struct AvatarView: View {
                 if (viewModel.isDevelopment) {
                     self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
                 } else {
-                    self.webViewStore.webView.load(URLRequest(url: URL(string: "https://embed.api.avatech.ai/")!))
+                    self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
                 }
             }
     }
@@ -103,20 +99,20 @@ public struct AvatarView: View {
 
 public class MessageHandler: NSObject, WKScriptMessageHandler {
     
-    var callbackAction: (String,String) -> ()
+    var callbackAction: (String, Any) -> ()
     
-    public init (callbackAction: @escaping (String, String) -> ()) {
+    public init (callbackAction: @escaping (String, Any) -> ()) {
         self.callbackAction = callbackAction
     }
     
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let dict = message.body as? [String : AnyObject] else {
+        guard let dict = message.body as? [String : Any] else {
             return
         }
         
         callbackAction(
             dict["eventName"] as! String,
-            dict["value"] as! String
+            dict["value"] as Any? ?? ""
         )
     }
 }
