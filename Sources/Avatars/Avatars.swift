@@ -28,7 +28,7 @@ public class AvatarViewModel: ObservableObject {
     @Published public var audioSource: String?
     
     @Published public var rawBase64Audio: String?
-    public init(text: Message, avatarId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false, currentEmotion: String? = nil) {
+    public init(avatarId: String, x: Float = 0, y: Float = 0, scale: Float = 1, rotation: Float, isDevelopment: Bool = false, currentEmotion: String? = nil) {
         self.avatarId = avatarId
         self.x = x
         self.y = y
@@ -91,7 +91,7 @@ public struct AvatarView: View {
                 if (viewModel.isDevelopment) {
                     self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
                 } else {
-                    self.webViewStore.webView.load(URLRequest(url: URL(string: "http://localhost:3002/")!))
+                    self.webViewStore.webView.load(URLRequest(url: URL(string: "https://embed.api.avatech.ai/")!))
                 }
             }
     }
